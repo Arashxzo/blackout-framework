@@ -1,584 +1,263 @@
-﻿ <div align="center">
+# BLACKOUT
 
-# 🕶️ BLACKOUT
+**An Android telephony research app with a Cloudflare Workers backend.**
 
-### ANDROID TELEPHONY SECURITY RESEARCH FRAMEWORK
+[![Android](https://img.shields.io/badge/Android-API%2029%2B-3DDC84?logo=android&logoColor=white)](https://developer.android.com/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![Cloudflare Workers](https://img.shields.io/badge/Backend-Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-**CONTROL THE SIGNAL. UNDERSTAND THE SYSTEM.**
+BLACKOUT combines a native Android application with a serverless API for controlled telephony research. The Android client provides a SIM-aware interface for sending data SMS during authorized tests; the backend manages device credits, payment transactions, and administrative operations.
 
-A research-oriented Android framework for controlled telephony security testing, powered by Kotlin, Jetpack Compose, and Cloudflare Workers.
+> **Use only in a controlled environment and on devices, SIMs, and networks you own or are explicitly authorized to test.** Sending messages can incur carrier charges and affect recipients or services. Do not use BLACKOUT to contact or disrupt third parties. You are responsible for complying with applicable laws, carrier rules, and the scope of your authorization.
 
-<br/>
+## Contents
 
-[![Android](https://img.shields.io/badge/Android-29%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
-[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-UI-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
-[![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Backend-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-CC3333?style=for-the-badge)](LICENSE)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Repository layout](#repository-layout)
+- [Requirements](#requirements)
+- [Backend setup](#backend-setup)
+- [Android setup](#android-setup)
+- [API overview](#api-overview)
+- [Testing and development](#testing-and-development)
+- [Security and operational notes](#security-and-operational-notes)
+- [License](#license)
 
-<br/>
+## Features
 
-[Overview](#-overview) • [Architecture](#-architecture) • [Features](#-key-capabilities) • [Installation](#-installation) • [API](#-api-reference) • [Security](#-security)
+### Android app
 
-<br/>
+- Kotlin application with a Jetpack Compose interface.
+- English and Persian UI options.
+- SIM selection and device telephony permission handling.
+- Data SMS test workflow with foreground-service progress and status logs.
+- Credit balance checks, credit consumption, and payment plan display.
+- Local operation history, including target, time, and requested quantity.
+- Settings include device ID display/copy and clearing app preferences and cache.
+- Administrative screens for account, transaction, and plan management.
 
-</div>
+### Backend
 
----
+- Cloudflare Worker API with Cloudflare D1 persistence.
+- Device credit balances, bans, usage counts, and transaction records.
+- NOWPayments invoice creation and signed payment webhook processing.
+- Admin-protected statistics, user actions, transaction listing, and plan management.
+- Vitest tests using the Cloudflare Workers test environment.
 
-## ⚠️ Legal & Ethical Disclaimer
+The database schema seeds three active plans (`STARTER`, `PRO`, and `ELITE`). Their initial prices and credit amounts are defined in [`backend/schema.sql`](backend/schema.sql).
 
-**BLACKOUT IS AN AUTHORIZED SECURITY RESEARCH TOOL.**
-
-This project is developed exclusively for:
-
-- Authorized security research.
-- Controlled laboratory experiments.
-- Defensive Android telephony evaluation.
-- Testing on personally owned devices or explicitly authorized test environments.
-
-The framework must never be used against devices, individuals, networks, or infrastructure without explicit authorization.
-
-Unauthorized use may violate applicable laws and regulations.
-
-**The developer assumes no responsibility for misuse, unauthorized deployment, or damages resulting from improper use of this software.**
-
-> By using BLACKOUT, you acknowledge and accept responsibility for complying with all applicable laws and authorization requirements.
-
----
-
-## 🔴 Overview
-
-**BLACKOUT** is a research-oriented Android and Cloudflare Workers framework designed to investigate Android telephony behavior under controlled SMS and WAP Push testing conditions.
-
-The project combines a native Android application with a serverless backend to provide a centralized environment for managing authorized experiments, application credits, payment transactions, and administrative operations.
-
-Unlike a standalone testing utility, BLACKOUT integrates mobile-side functionality with cloud-based infrastructure.
-
-### Project Highlights
-
-| Component | Implementation |
-|:---|:---|
-| Android Client | Kotlin |
-| User Interface | Jetpack Compose |
-| Backend | Cloudflare Workers |
-| Backend Language | TypeScript |
-| Database | Cloudflare D1 |
-| Payment Gateway | NOWPayments |
-| Webhook Security | HMAC-SHA512 |
-| Build System | Gradle |
-| Backend Tooling | Wrangler |
-
----
-
-## 🧩 Key Capabilities
-
-### Android Client
-
-- **Native Android Interface** — Built with Kotlin and Jetpack Compose.
-- **SIM Management** — Select an available SIM for authorized laboratory testing.
-- **Experiment Configuration** — Configure testing parameters through the client.
-- **Credit Management** — Retrieve and consume application credits.
-- **Execution History** — Review previous operations and local logs.
-- **Backend Connectivity** — Communicate with the configured Cloudflare Worker API.
-- **Administrative Access** — Access protected administrative functionality.
-
-### Cloud Backend
-
-- **Serverless Architecture** — Runs on Cloudflare Workers.
-- **Persistent Storage** — Cloudflare D1 database integration.
-- **Payment Processing** — NOWPayments invoice integration.
-- **Webhook Validation** — HMAC-SHA512 signature verification.
-- **Transaction Management** — Track payment states and credit transactions.
-- **Administrative API** — Manage users, transactions, and credit plans.
-- **Environment-Based Configuration** — Keep sensitive values outside source code.
-
----
-
-## 🏗️ Architecture
-
-BLACKOUT follows a modular client-server architecture.
-
-The Android client communicates with the backend through HTTPS REST endpoints. The backend manages application data, transaction records, credit balances, and administrative operations.
-
-### System Architecture
+## Architecture
 
 ```mermaid
-flowchart TB
-    A["🕶️ BLACKOUT Android Client"]
+flowchart LR
+    Android["Android app<br/>Kotlin / Compose"]
+    Worker["Cloudflare Worker<br/>TypeScript"]
+    D1[("Cloudflare D1")]
+    Payments["NOWPayments"]
 
-    subgraph ANDROID["Android Application"]
-        B["Jetpack Compose UI"]
-        C["SIM Management"]
-        D["Experiment Interface"]
-        E["Credit & History"]
-    end
-
-    subgraph CLOUD["Cloudflare Infrastructure"]
-        F["Cloudflare Worker API"]
-        G["Authentication & Validation"]
-        H["Cloudflare D1"]
-    end
-
-    I["NOWPayments"]
-    J["Payment Webhook"]
-
-    A --> B
-    B --> C
-    B --> D
-    B --> E
-
-    B <-->|HTTPS / REST| F
-    F --> G
-    G <--> H
-
-    F -->|Create Invoice| I
-    I -->|Payment Notification| J
-    J --> F
+    Android <-->|HTTPS API| Worker
+    Worker <--> D1
+    Worker -->|Create invoice| Payments
+    Payments -->|Signed webhook| Worker
 ```
 
-### Application Flow
+The Android app calls the Worker for plans, credit checks/consumption, and payment invoices. The Worker stores application state in D1 and processes payment notifications after signature verification. Configure the Android app with the deployed Worker URL; the URL is injected into the app at build time.
 
-1. The Android client initializes using its configured backend URL.
-2. The application communicates with the Worker API.
-3. The backend retrieves application data from D1.
-4. Payment requests are processed through NOWPayments.
-5. Payment notifications are verified before transaction processing.
-6. Administrative requests are authenticated by the backend.
-
----
-
-## 📁 Repository Structure
+## Repository layout
 
 ```text
-blackout-framework/
-│
+.
 ├── android/
-│   │
-│   ├── app/
-│   │   ├── src/
-│   │   │   └── main/
-│   │   │       └── java/
-│   │   │           └── com/arashxzo/blackout/
-│   │   │
-│   │   ├── build.gradle
-│   │   └── proguard-rules.pro
-│   │
-│   ├── gradle/
-│   │   └── wrapper/
-│   │
-│   ├── build.gradle
-│   ├── gradle.properties
-│   ├── settings.gradle
+│   ├── app/                 # Android app source, resources, and build config
+│   ├── gradle/              # Gradle wrapper configuration
 │   └── local.properties.example
-│
 ├── backend/
-│   │
-│   ├── src/
-│   │   └── index.ts
-│   │
-│   ├── schema.sql
-│   ├── package.json
-│   ├── wrangler.jsonc
-│   └── .dev.vars.example
-│
-├── .gitignore
+│   ├── src/index.ts         # Cloudflare Worker routes
+│   ├── test/                # Backend tests
+│   ├── schema.sql           # D1 tables and initial plans
+│   ├── package.json         # Backend scripts and dependencies
+│   ├── .dev.vars.example    # Local secrets template
+│   └── wrangler.local.jsonc.example
 ├── LICENSE
-├── README.md
-├── project_dump.sh
-└── project_dump.txt
+└── README.md
 ```
 
----
+## Requirements
 
-## ⚙️ Installation
+| Component | Requirement |
+|---|---|
+| Android build | Android Studio, JDK 21, Android SDK Platform 35 |
+| Android device | Android 10 (API 29) or later; a compatible SIM is needed for telephony tests |
+| Backend | Node.js 20 or later and npm |
+| Cloud deployment | Cloudflare account with Workers and D1 access |
+| Payment processing | NOWPayments account and API/IPN credentials |
 
-BLACKOUT consists of two independently configured components:
+The Android app targets API 35 and declares a minimum API level of 29. The Gradle daemon is configured to use JDK 21; Java source/target compatibility for the app is set to 17.
 
-1. Cloudflare Worker Backend
-2. Android Application
+## Backend setup
 
-Configure and deploy the backend before connecting the Android client.
+Run the following commands from the repository root unless a step says otherwise.
 
-### Prerequisites
-
-| Requirement | Version |
-|:---|:---|
-| Node.js | 18+ |
-| npm | Included with Node.js |
-| Android Studio | Latest stable |
-| JDK | 17+ |
-| Android SDK | API 35 |
-| Minimum Android | API 29 |
-| Cloudflare Account | Required |
-| NOWPayments Account | Required for payment functionality |
-
----
-
-### 01 — Clone Repository
-
-```bash
-git clone https://github.com/Arashxzo/blackout-framework.git
-
-cd blackout-framework
-```
-
-### 02 — Configure Backend
-
-Navigate to the backend directory:
-
-```bash
-cd backend
-```
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Create your local environment configuration:
-
-```bash
-cp .dev.vars.example .dev.vars
-```
-
-On Windows PowerShell:
+### 1. Install dependencies and prepare local configuration
 
 ```powershell
+cd backend
+npm install
 Copy-Item .dev.vars.example .dev.vars
+Copy-Item wrangler.local.jsonc.example wrangler.local.jsonc
 ```
 
-Authenticate with Cloudflare:
+On macOS or Linux, use `cp` instead of `Copy-Item`.
 
-```bash
+### 2. Create and configure D1
+
+Authenticate with Cloudflare and create the database:
+
+```powershell
 npx wrangler login
-```
-
-### 03 — Create D1 Database
-
-Create the database:
-
-```bash
 npx wrangler d1 create blackout-db
 ```
 
-Cloudflare will return a database ID.
+Copy the database ID returned by Wrangler into the `database_id` field in `wrangler.local.jsonc`. Also set `D1_DATABASE_ID` in `.dev.vars` to that same value. Keep the two values in sync.
 
-Copy that ID into:
+### 3. Configure local environment values
 
-```text
-backend/.dev.vars
+Edit `backend/.dev.vars` and provide your own values:
+
+```dotenv
+D1_DATABASE_ID=YOUR_D1_DATABASE_ID
+NOWPAYMENTS_API_KEY=YOUR_NOWPAYMENTS_API_KEY
+NOWPAYMENTS_IPN_SECRET=YOUR_NOWPAYMENTS_IPN_SECRET
+ADMIN_SECRET=REPLACE_WITH_A_LONG_RANDOM_SECRET
 ```
 
-Configure the following values:
+Do not commit `.dev.vars` or `wrangler.local.jsonc`; both are intended to remain local.
 
-```env
-D1_DATABASE_ID=YOUR_DATABASE_ID
+### 4. Initialize a local database and start the Worker
 
-NOWPAYMENTS_API_KEY=YOUR_API_KEY
-NOWPAYMENTS_IPN_SECRET=YOUR_IPN_SECRET
-
-ADMIN_SECRET=YOUR_STRONG_ADMIN_SECRET
+```powershell
+npm run db:init:local
+npm run dev
 ```
 
-**Important:** Never publish these values or commit `.dev.vars` to Git.
+The development server uses `wrangler.local.jsonc`. Keep it running while testing the Android app against the local Worker. The Android emulator/device must be able to reach the configured backend URL.
 
-### 04 — Initialize Database
+### 5. Deploy the backend
 
-Generate Cloudflare Worker types:
+Initialize the remote D1 database:
 
-```bash
-npm run types
-```
-
-Initialize the remote database schema:
-
-```bash
+```powershell
 npm run db:init
 ```
 
-For a local development database:
+Set production secrets in Cloudflare. Wrangler prompts for each value:
 
-```bash
-npm run db:init:local
+```powershell
+npx wrangler secret put NOWPAYMENTS_API_KEY --config wrangler.local.jsonc
+npx wrangler secret put NOWPAYMENTS_IPN_SECRET --config wrangler.local.jsonc
+npx wrangler secret put ADMIN_SECRET --config wrangler.local.jsonc
 ```
 
-### 05 — Configure Production Secrets
+Then deploy:
 
-Before processing production payment notifications, configure your Cloudflare secrets:
-
-```bash
-npx wrangler secret put NOWPAYMENTS_API_KEY
-
-npx wrangler secret put NOWPAYMENTS_IPN_SECRET
-
-npx wrangler secret put ADMIN_SECRET
-```
-
-### 06 — Run Backend Tests
-
-Execute the automated test suite:
-
-```bash
-npm test
-```
-
-Run the development server:
-
-```bash
-npm run dev
-```
-
-### 07 — Deploy Backend
-
-Deploy the Worker:
-
-```bash
+```powershell
 npm run deploy
 ```
 
-After successful deployment, your backend endpoint will resemble:
+Use the Worker URL printed by Wrangler in the Android configuration below. Local `.dev.vars` values are for local development; production secrets must be set in Cloudflare as shown.
 
-```text
-https://blackout-backend.YOUR_SUBDOMAIN.workers.dev
-```
+## Android setup
 
-Keep this URL for Android configuration.
+### 1. Configure the Worker URL and Android SDK
 
----
-
-## 📱 Android Configuration
-
-### 01 — Configure Local Properties
-
-Navigate to the Android directory:
-
-```bash
-cd android
-```
-
-Copy the configuration template:
-
-```bash
-cp local.properties.example local.properties
-```
-
-On Windows PowerShell:
+Copy the template:
 
 ```powershell
+cd ..\android
 Copy-Item local.properties.example local.properties
 ```
 
-### 02 — Configure Backend URL
-
-Open:
-
-```text
-android/local.properties
-```
-
-Set your Cloudflare Worker URL:
+Edit `android/local.properties`. Set `BACKEND_URL` to your Worker URL, without a trailing slash. Ensure `sdk.dir` points to your local Android SDK; the template includes path examples.
 
 ```properties
+sdk.dir=C:\\path\\to\\Android\\Sdk
 BACKEND_URL=https://blackout-backend.YOUR_SUBDOMAIN.workers.dev
 ```
 
-Configure the Android SDK path if it is not already configured.
+`local.properties` is ignored by Git and should not be committed. If `BACKEND_URL` is unset or still has the template value, the app displays a configuration error instead of starting normally.
 
-**Note:** Do not include a trailing slash in `BACKEND_URL`.
+### 2. Build and run
 
-### 03 — Build & Run
+1. Open the `android` directory in Android Studio.
+2. Allow Gradle sync to finish and install the required SDK components if prompted.
+3. Run the `app` configuration on an Android 10+ device or emulator.
+4. For telephony testing, use a compatible test device/SIM and grant the requested permissions only when appropriate.
+5. Confirm the configured backend is reachable before testing credit or payment flows.
 
-1. Open the `android/` directory in Android Studio.
-2. Allow Gradle synchronization to complete.
-3. Verify the backend configuration.
-4. Connect an authorized Android test device.
-5. Build and run the application.
+To produce a release APK or app bundle, use Android Studio's **Build > Generate Signed Bundle / APK** flow and sign it with your own keystore. Keep the keystore and its credentials private.
 
-### Release APK
+## API overview
 
-To generate a signed APK:
+All routes are served by the Worker. JSON request fields for the write endpoints are shown in the table.
 
-```text
-Build
-  └── Generate Signed Bundle / APK
-        └── APK
-              └── Release
-```
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/get-plans` | List active credit plans |
+| `POST` | `/api/create-payment` | Create an invoice; JSON: `deviceId`, `planId` |
+| `GET` | `/api/get-credits?device_id={deviceId}` | Read a device's credits and banned status |
+| `POST` | `/api/consume-credits` | Consume credits; JSON: `deviceId`, `amount` |
+| `POST` | `/api/nowpayments-webhook` | Receive and verify NOWPayments notifications |
+| `GET` | `/api/admin/stats` | Read user, usage, and revenue totals |
+| `GET` | `/api/admin/users` | List registered devices |
+| `GET` | `/api/admin/transactions` | List recent transactions |
+| `POST` | `/api/admin/user-action` | Ban/unban/delete a device or set its credits |
+| `GET` | `/api/admin/plans` | List all plans, including inactive plans |
+| `POST` | `/api/admin/plans/update` | Update a plan |
 
-Keep your signing keystore and passwords private.
+Admin routes require the configured `ADMIN_SECRET` through the authorization mechanism used by the Worker. Keep this secret on the server; never embed it in the Android app or distribute it to clients. The webhook route validates the NOWPayments signature before processing a notification.
 
----
+## Testing and development
 
-## 🔌 API Reference
+From `backend/`:
 
-The backend exposes REST endpoints for application functionality, payment processing, and administration.
-
-### Public API
-
-| Method | Endpoint | Description |
-|:---:|:---|:---|
-| `GET` | `/api/get-plans` | Retrieve active credit plans |
-| `POST` | `/api/create-payment` | Create a payment invoice |
-| `GET` | `/api/get-credits` | Retrieve device credit balance |
-| `POST` | `/api/consume-credits` | Consume available credits |
-
-### Payment Integration
-
-| Method | Endpoint | Description |
-|:---:|:---|:---|
-| `POST` | `/api/nowpayments-webhook` | Process verified payment notifications |
-
-### Administrative API
-
-| Method | Endpoint | Description |
-|:---:|:---|:---|
-| `GET` | `/api/admin/stats` | Retrieve system statistics |
-| `GET` | `/api/admin/users` | Retrieve registered devices |
-| `GET` | `/api/admin/transactions` | Retrieve transaction history |
-| `POST` | `/api/admin/user-action` | Manage user status and credits |
-| `GET` | `/api/admin/plans` | Retrieve credit plans |
-| `POST` | `/api/admin/plans/update` | Update plan configuration |
-
-### Authentication
-
-Administrative endpoints require a valid Bearer token:
-
-```http
-Authorization: Bearer YOUR_ADMIN_SECRET
-```
-
-Public application endpoints do not use this administrative authentication mechanism.
-
----
-
-## 🛡️ Security Architecture
-
-Security is an important part of BLACKOUT's backend design.
-
-### Implemented Security Mechanisms
-
-| Mechanism | Implementation |
-|:---|:---|
-| Secret Management | Local environment files and Wrangler secrets |
-| Webhook Authentication | HMAC-SHA512 |
-| Signature Validation | Recursive alphabetical key sorting |
-| Payment Validation | Final transaction state verification |
-| Duplicate Handling | Already-credited transaction protection |
-| Admin Authentication | Bearer token |
-| Database | Cloudflare D1 |
-
-### Payment Verification
-
-Payment notifications are validated before credit allocation.
-
-The verification process includes:
-
-1. Receive the payment notification.
-2. Parse the incoming JSON payload.
-3. Sort object keys recursively.
-4. Calculate and verify the HMAC-SHA512 signature.
-5. Validate the transaction record.
-6. Check the payment status.
-7. Credit the corresponding account only when the status is `finished`.
-
-Previously credited transactions are not credited again.
-
-### Security Best Practices
-
-- Never hardcode credentials into application source code.
-- Never expose `ADMIN_SECRET` inside the Android application.
-- Keep `.dev.vars` and `local.properties` out of version control.
-- Use HTTPS for all remote API communication.
-- Protect Android signing keys.
-- Restrict administrative access.
-- Review deployment configuration before exposing the backend publicly.
-- Perform testing exclusively in authorized laboratory environments.
-
----
-
-## 🧪 Development & Testing
-
-### Backend Development
-
-```bash
-cd backend
-
-npm install
-
-npm run dev
-```
-
-### Run Tests
-
-```bash
+```powershell
 npm test
 ```
 
-### Watch Mode
+Run tests in watch mode:
 
-```bash
+```powershell
 npm run test:watch
 ```
 
-### Generate Worker Types
+Start the local Worker:
 
-```bash
+```powershell
+npm run dev
+```
+
+Generate Cloudflare Worker types:
+
+```powershell
 npm run types
 ```
 
-### Deploy
+The automated test suite covers backend routing and API behavior. The repository does not currently include an Android automated test suite.
 
-```bash
-npm run deploy
-```
+## Security and operational notes
 
----
+- The Android application requests SMS, phone-state, notification, and network permissions. Review the permission prompts and use only a dedicated, authorized test setup.
+- The app sends binary/data SMS through the selected SIM. Carrier restrictions, device support, message charges, and delivery behavior vary.
+- Configure conservative test quantities and destinations. Obtain explicit authorization before sending any message.
+- Credits are consumed through the backend before the Android foreground service begins sending.
+- Operation history is stored locally in app preferences. The settings wipe action clears app preferences and cache; it does not delete backend records or carrier records.
+- Store `.dev.vars`, `local.properties`, production secrets, and signing keys securely. Never commit secrets or place the administrative secret in the client.
+- The backend relies on Cloudflare and NOWPayments availability and correct account configuration. Review the deployment and payment settings before exposing a Worker to real users.
+- BLACKOUT is a research project, not a production-certified telephony or payment platform. Review its behavior, legal requirements, and security posture before any deployment.
 
-## ⚠️ Project Limitations
+## License
 
-BLACKOUT is an experimental proof of concept, not a production-ready telephony security platform.
-
-Its behavior may vary depending on:
-
-- Android version and device manufacturer.
-- SIM configuration and carrier restrictions.
-- Telephony service implementation.
-- Network conditions.
-- Backend configuration and service availability.
-
-The backend and Android application should undergo independent security reviews before any production-oriented use.
-
----
-
-## 📜 License
-
-BLACKOUT is distributed under the **Apache License 2.0**.
-
-You may use, modify, and distribute the software according to the terms of the license.
-
-See the [LICENSE](LICENSE) file for complete details.
-
----
-
-## 👨‍💻 Author
-
-<div align="center">
-
-**Arashxzo**
-
-[![GitHub](https://img.shields.io/badge/GitHub-Arashxzo-181717?style=for-the-badge&logo=github)](https://github.com/Arashxzo)
-
-[![Repository](https://img.shields.io/badge/Repository-BLACKOUT-FF1744?style=for-the-badge&logo=github)](https://github.com/Arashxzo/blackout-framework)
-
-<br/>
-
-### 🕶️ BLACKOUT
-
-**CONTROL THE SIGNAL. TEST THE SYSTEM.**
-
-<sub>Built for authorized security research.</sub>
-
-</div>
+BLACKOUT is distributed under the Apache License 2.0. See [`LICENSE`](LICENSE) for the full text.
