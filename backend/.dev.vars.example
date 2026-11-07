@@ -11,10 +11,6 @@
 # .dev.vars is gitignored — never commit it.
 # ============================================================
 
-# --- D1 Database ---
-# Get it from `npx wrangler d1 create blackout-db`
-D1_DATABASE_ID=YOUR_DATABASE_ID_HERE
-
 # --- NOWPayments ---
 # Get them from https://account.nowpayments.io/store-settings
 NOWPAYMENTS_API_KEY=your_api_key_here
