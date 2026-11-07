@@ -17,7 +17,10 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
     const authHeader = request.headers.get('Authorization');
-    const isAdmin = authHeader === `Bearer ${env.ADMIN_SECRET}`;
+    const isAdmin =
+      typeof env.ADMIN_SECRET === "string" &&
+      env.ADMIN_SECRET.length > 0 &&
+      authHeader === `Bearer ${env.ADMIN_SECRET}`;
 
     // ==========================================
     // 1. Get plans list
