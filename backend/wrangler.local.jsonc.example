@@ -1,10 +1,13 @@
 /**
- * Base Wrangler configuration template.
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
  *
- * For local development, copy wrangler.local.jsonc.example
- * to wrangler.local.jsonc and configure your own D1 database ID.
+ * IMPORTANT:
+ * This is a TEMPLATE. Copy it to `wrangler.local.jsonc` (same
+ * directory) and replace `YOUR_D1_DATABASE_ID` with your own
+ * Cloudflare D1 database ID.
  *
- * The local configuration file is gitignored.
+ * `wrangler.local.jsonc` is gitignored and must never be committed.
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",

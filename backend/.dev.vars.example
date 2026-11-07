@@ -4,11 +4,10 @@
 # Copy this file to `.dev.vars` (same directory) and fill in
 # your own values.
 #
-# `wrangler dev` reads `.dev.vars` automatically for local secrets.
-# `npm run deploy` uses `dotenv-cli` to load these values for
-# `${D1_DATABASE_ID}` interpolation in `wrangler.jsonc`.
+# `wrangler dev` and `wrangler types` read `.dev.vars`
+# automatically for local secrets.
 #
-# .dev.vars is gitignored — never commit it.
+# `.dev.vars` is gitignored — never commit it.
 # ============================================================
 
 # --- NOWPayments ---
