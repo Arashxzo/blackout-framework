@@ -1,0 +1,29 @@
+# ============================================================
+# BLACKOUT — Local Configuration Template
+# ============================================================
+# 1. Copy this file to `local.properties` (same directory).
+# 2. Fill in your own values.
+# 3. NEVER commit `local.properties` — it is gitignored.
+# ============================================================
+
+# ------------------------------------------------------------
+# Android SDK path
+# ------------------------------------------------------------
+# Windows:
+# sdk.dir=C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Android\\Sdk
+#
+# macOS:
+# sdk.dir=/Users/YOUR_USERNAME/Library/Android/sdk
+#
+# Linux:
+# sdk.dir=/home/YOUR_USERNAME/Android/Sdk
+
+# ------------------------------------------------------------
+# Backend URL (Cloudflare Worker)
+# ------------------------------------------------------------
+# After deploying `backend/` with `npx wrangler deploy`, you will
+# get a URL like:
+#     https://blackout-backend.YOUR_SUBDOMAIN.workers.dev
+#
+# Paste it below. Do NOT include a trailing slash.
+BACKEND_URL=https://configure-me.workers.dev

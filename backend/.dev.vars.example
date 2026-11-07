@@ -1,0 +1,26 @@
+# ============================================================
+# BLACKOUT Backend — Local Configuration Template
+# ============================================================
+# Copy this file to `.dev.vars` (same directory) and fill in
+# your own values.
+#
+# `wrangler dev` reads `.dev.vars` automatically for local secrets.
+# `npm run deploy` uses `dotenv-cli` to load these values for
+# `${D1_DATABASE_ID}` interpolation in `wrangler.jsonc`.
+#
+# .dev.vars is gitignored — never commit it.
+# ============================================================
+
+# --- D1 Database ---
+# Get it from `npx wrangler d1 create blackout-db`
+D1_DATABASE_ID=YOUR_DATABASE_ID_HERE
+
+# --- NOWPayments ---
+# Get them from https://account.nowpayments.io/store-settings
+NOWPAYMENTS_API_KEY=your_api_key_here
+NOWPAYMENTS_IPN_SECRET=your_ipn_secret_here
+
+# --- Admin Panel ---
+# Choose a very strong password (20+ chars, mix of letters,
+# digits, and symbols)
+ADMIN_SECRET=your_super_strong_admin_password_here

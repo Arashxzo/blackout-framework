@@ -1,0 +1,73 @@
+# ==========================================
+# ANDROID (App)
+# ==========================================
+*.iml
+.gradle/
+**/build/
+**/app/release/
+**/app/debug/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+
+# ==========================================
+# ANDROID LOCAL CONFIG (CRITICAL)
+# ==========================================
+# local.properties contains sdk.dir + BACKEND_URL — must never be committed
+**/local.properties
+# But the example template SHOULD be committed:
+!**/local.properties.example
+
+# IDE files
+android/.idea/
+android/.vscode/
+
+# ==========================================
+# BACKEND (Cloudflare Workers / Node.js)
+# ==========================================
+node_modules/
+dist/
+.wrangler/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================
+# SECRETS & CREDENTIALS (CRITICAL)
+# ==========================================
+# Android Keystores
+*.jks
+*.keystore
+keystore.properties
+
+# Environment variables & secrets
+.env
+.env.local
+.dev.vars
+secrets.properties
+wrangler.toml
+
+# ==========================================
+# OS & IDE FILES
+# ==========================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.vscode/
+*.code-workspace
+
+# ==========================================
+# MISC
+# ==========================================
+*.hprof
+project_dump.sh
+project_dump.txt

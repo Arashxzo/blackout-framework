@@ -1,0 +1,26 @@
+{
+  "name": "blackout-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend for BLACKOUT - Zero-Click Android Exploit Framework",
+  "scripts": {
+    "dev": "dotenv -e .dev.vars -- wrangler dev",
+    "start": "dotenv -e .dev.vars -- wrangler dev",
+    "deploy": "dotenv -e .dev.vars -- wrangler deploy",
+    "types": "dotenv -e .dev.vars -- wrangler types",
+    "db:init": "dotenv -e .dev.vars -- wrangler d1 execute blackout-db --file=./schema.sql --remote",
+    "db:init:local": "dotenv -e .dev.vars -- wrangler d1 execute blackout-db --file=./schema.sql --local",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cf-typegen": "dotenv -e .dev.vars -- wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.3",
+    "@types/node": "^26.6.6",
+    "dotenv-cli": "^7.4.0",
+    "typescript": "^5.5.2",
+    "vitest": "~5.0.3",
+    "wrangler": "^4.158.0"
+  }
+}
