@@ -19,7 +19,7 @@
 		{
 			"binding": "blackout_db",
 			"database_name": "blackout-db",
-			"database_id": "${D1_DATABASE_ID}"
+			"database_id": "LOCAL_DATABASE_ID"
 		}
 	]
 }

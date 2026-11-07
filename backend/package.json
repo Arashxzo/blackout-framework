@@ -1,19 +1,20 @@
+
 {
   "name": "blackout-backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Backend for BLACKOUT - Zero-Click Android Exploit Framework",
+  "description": "Backend for BLACKOUT",
   "scripts": {
-    "dev": "dotenv -e .dev.vars -- wrangler dev",
-    "start": "dotenv -e .dev.vars -- wrangler dev",
-    "deploy": "dotenv -e .dev.vars -- wrangler deploy",
-    "types": "dotenv -e .dev.vars -- wrangler types",
-    "db:init": "dotenv -e .dev.vars -- wrangler d1 execute blackout-db --file=./schema.sql --remote",
-    "db:init:local": "dotenv -e .dev.vars -- wrangler d1 execute blackout-db --file=./schema.sql --local",
+    "dev": "dotenv -e .dev.vars -- wrangler dev --config wrangler.local.jsonc",
+    "start": "dotenv -e .dev.vars -- wrangler dev --config wrangler.local.jsonc",
+    "deploy": "dotenv -e .dev.vars -- wrangler deploy --config wrangler.local.jsonc",
+    "types": "dotenv -e .dev.vars -- wrangler types --config wrangler.local.jsonc",
+    "db:init": "dotenv -e .dev.vars -- wrangler d1 execute blackout-db --file=./schema.sql --remote --config wrangler.local.jsonc",
+    "db:init:local": "dotenv -e .dev.vars -- wrangler d1 execute blackout-db --file=./schema.sql --local --config wrangler.local.jsonc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "cf-typegen": "dotenv -e .dev.vars -- wrangler types"
+    "cf-typegen": "dotenv -e .dev.vars -- wrangler types --config wrangler.local.jsonc"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.4.3",

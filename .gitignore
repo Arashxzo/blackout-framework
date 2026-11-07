@@ -52,6 +52,7 @@ keystore.properties
 .dev.vars
 secrets.properties
 wrangler.toml
+wrangler.local.jsonc
 
 # ==========================================
 # OS & IDE FILES

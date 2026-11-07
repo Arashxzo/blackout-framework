@@ -1,0 +1,25 @@
+/**
+ * Base Wrangler configuration template.
+ *
+ * For local development, copy wrangler.local.jsonc.example
+ * to wrangler.local.jsonc and configure your own D1 database ID.
+ *
+ * The local configuration file is gitignored.
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "blackout-backend",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-11-04",
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true,
+	"d1_databases": [
+		{
+			"binding": "blackout_db",
+			"database_name": "blackout-db",
+			"database_id": "YOUR_D1_DATABASE_ID"
+		}
+	]
+}
