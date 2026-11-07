@@ -18,9 +18,9 @@
 
 BLACKOUT is an Android-based telephony research framework designed for controlled laboratory environments and authorized mobile network testing.
 
-It combines a native Android application with a serverless backend infrastructure built on Cloudflare Workers. The Android client provides SIM-aware telephony functionality, while the backend handles device identification, credit management, payment processing, and administrative operations.
+It combines a native Android application with a serverless backend infrastructure built on Cloudflare Workers. The Android client provides a SIM-aware interface for authorized telephony operations, while the backend handles device identification, credit management, payment processing, and administrative operations.
 
-The project is designed around a modular architecture that separates mobile operations from backend services, allowing each component to be developed, tested, and maintained independently.
+The project follows a modular architecture that separates mobile functionality from backend services, allowing each component to be developed, tested, and maintained independently.
 
 > [!CAUTION]
 > **Authorized Research Only**
@@ -36,6 +36,7 @@ The project is designed around a modular architecture that separates mobile oper
 ## Table of Contents
 
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
 - [Requirements](#requirements)
@@ -60,7 +61,7 @@ A native Android application built with Kotlin and Jetpack Compose.
 - **Modern UI:** Native Jetpack Compose interface with English and Persian localization.
 - **SIM Management:** SIM selection and telephony permission handling.
 - **Telephony Operations:** Data SMS dispatch through an Android foreground service, subject to device, carrier, and platform compatibility.
-- **Credit Management:** Real-time balance retrieval and server-side credit consumption.
+- **Credit Management:** Balance retrieval and server-side credit consumption.
 - **Payment Integration:** Credit plan browsing and payment invoice creation.
 - **Operation History:** Locally maintained operation records.
 - **Application Settings:** Configurable application preferences.
@@ -77,9 +78,39 @@ A serverless backend responsible for application state, payment processing, and 
 - **Webhook Verification:** HMAC-SHA512 signature verification with recursively sorted JSON keys.
 - **Credit Management:** Server-side balance validation and consumption.
 - **Device Administration:** User management, credit adjustments, and device restrictions.
-- **Plan Management:** Create, update, and manage credit plans.
+- **Plan Management:** Credit plan management.
 - **Revenue Analytics:** Administrative statistics and transaction reporting.
 - **Automated Testing:** Vitest-based backend test suite using the Cloudflare Workers test environment.
+
+---
+
+## Screenshots
+
+Explore the BLACKOUT Android application interface.
+
+<p align="center">
+  <strong>Home</strong>
+  <br>
+  <img src="screenshots/home.jpg" width="260" alt="BLACKOUT Home Screen">
+</p>
+
+<p align="center">
+  <strong>Operation History</strong>
+  <br>
+  <img src="screenshots/history.jpg" width="260" alt="BLACKOUT Operation History">
+</p>
+
+<p align="center">
+  <strong>Settings</strong>
+  <br>
+  <img src="screenshots/settings.jpg" width="260" alt="BLACKOUT Settings">
+</p>
+
+<p align="center">
+  <strong>Admin Panel</strong>
+  <br>
+  <img src="screenshots/admin-panel.jpg" width="260" alt="BLACKOUT Admin Panel">
+</p>
 
 ---
 
@@ -144,7 +175,6 @@ The backend URL is injected into the Android application at build time through `
 | Mobile Platform | Android 10+ (API 29+) |
 | Programming Language | Kotlin 2.2 |
 | UI Framework | Jetpack Compose |
-| Mobile Architecture | Native Android |
 | Backend Runtime | Cloudflare Workers |
 | Backend Language | TypeScript |
 | Database | Cloudflare D1 |
@@ -162,7 +192,7 @@ The backend URL is injected into the Android application at build time through `
 
 | Requirement | Minimum |
 |---|---|
-| Android Studio | Compatible with the project's Gradle configuration |
+| Android Studio | Compatible with project Gradle configuration |
 | JDK | 17+ |
 | Android SDK | Platform 35 |
 | Node.js | 20+ |
@@ -186,7 +216,6 @@ BLACKOUT/
 │
 ├── android/
 │   ├── app/
-│   │   └── src/
 │   ├── local.properties.example
 │   └── ...
 │
@@ -198,12 +227,16 @@ BLACKOUT/
 │   ├── package.json
 │   └── ...
 │
+├── screenshots/
+│   ├── home.jpg
+│   ├── history.jpg
+│   ├── settings.jpg
+│   └── admin-panel.jpg
+│
 ├── .gitignore
 ├── LICENSE
 └── README.md
 ```
-
-*The directory listing above represents the main project layout. Individual source files may vary between versions.*
 
 ---
 
@@ -253,7 +286,7 @@ cp wrangler.local.jsonc.example wrangler.local.jsonc
 
 Update `wrangler.local.jsonc` with your D1 database ID.
 
-Configure the required secrets in `.dev.vars` according to the template:
+Configure the required secrets in `.dev.vars`:
 
 - `NOWPAYMENTS_API_KEY`
 - `NOWPAYMENTS_IPN_SECRET`
@@ -284,8 +317,6 @@ npx wrangler secret put NOWPAYMENTS_IPN_SECRET --config wrangler.local.jsonc
 
 npx wrangler secret put ADMIN_SECRET --config wrangler.local.jsonc
 ```
-
-Use production credentials rather than local development values.
 
 ### 9. Deploy the Backend
 
@@ -354,7 +385,7 @@ To generate a signed release APK:
 5. Configure the release build.
 6. Complete the signing process.
 
-Keep your keystore and signing credentials private and securely backed up.
+Keep your keystore and signing credentials private.
 
 ---
 
@@ -379,8 +410,6 @@ If this is your first setup, create it from the example template before running 
 ```powershell
 npm run test:watch
 ```
-
-The test suite covers backend functionality, including API routing and application behavior.
 
 ---
 
@@ -419,99 +448,8 @@ Include the secret in the HTTP Authorization header:
 Authorization: Bearer YOUR_ADMIN_SECRET
 ```
 
-Never expose the administrative secret in the Android application, client-side code, public repositories, or logs.
+Never expose the administrative secret in the Android application or client-side code.
 
 ### Payment Webhook Verification
 
-The NOWPayments webhook endpoint validates incoming notifications using HMAC-SHA512.
-
-The verification process uses recursively sorted JSON keys to ensure consistent signature generation.
-
-Payment notifications must pass signature verification before they are processed.
-
----
-
-## Security
-
-Security and responsible operation are essential parts of BLACKOUT.
-
-### Credential Protection
-
-Never commit the following files:
-
-- `.dev.vars`
-- `wrangler.local.jsonc`
-- `local.properties`
-- Android signing keystores
-- Private keys and API credentials
-
-All sensitive configuration should remain outside version control.
-
-### Production Secrets
-
-Store production credentials using Cloudflare's secret management system:
-
-```powershell
-npx wrangler secret put ADMIN_SECRET
-```
-
-Rotate exposed credentials immediately.
-
-### API Protection
-
-Recommended production security measures:
-
-- Apply Cloudflare WAF rules and rate limiting.
-- Restrict access to administrative endpoints.
-- Validate and sanitize incoming API requests.
-- Verify payment webhook signatures.
-- Monitor suspicious API activity.
-- Protect administrative credentials.
-- Review device identification and credit validation mechanisms.
-
-### Data and Operation Handling
-
-- Credit consumption is managed by the backend.
-- Operation history is stored locally in application preferences.
-- The settings wipe action clears local preferences and cache.
-- Local wiping does not remove backend records, payment transactions, carrier records, or external logs.
-
-### Deployment Responsibility
-
-BLACKOUT is a research framework, not a guarantee of security, anonymity, or carrier compatibility.
-
-Review the source code, deployment configuration, payment integration, and applicable legal requirements before deploying the project.
-
----
-
-## Contributing
-
-Contributions, bug reports, and technical improvements are welcome.
-
-Before submitting changes:
-
-1. Review the existing architecture.
-2. Keep sensitive credentials out of commits.
-3. Follow the established coding conventions.
-4. Run the backend test suite.
-5. Provide clear descriptions of behavioral changes.
-
-For substantial changes, consider opening an issue before submitting a pull request.
-
----
-
-## License
-
-BLACKOUT is distributed under the **Apache License 2.0**.
-
-You are free to use, modify, and distribute the software in accordance with the license terms.
-
-See the [LICENSE](LICENSE) file for the complete license text.
-
----
-
-<p align="center">
-  <strong>BLACKOUT</strong>
-  <br>
-  <sub>Built for controlled telephony research and engineering.</sub>
-</p>
+The NOWPayments webhook endpoint validates incoming notifications
