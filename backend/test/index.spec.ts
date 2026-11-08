@@ -8,7 +8,6 @@ import worker from "../src/index";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
-// Helper to call the worker directly with a given path/method/body/headers
 async function callWorker(
 	path: string,
 	options: {
@@ -38,10 +37,11 @@ function adminAuth() {
 	return { Authorization: `Bearer ${env.ADMIN_SECRET}` };
 }
 
-// ─────────────────────────────────────────────────────────────
-// Global setup: create all tables once, mirroring schema.sql
-// ─────────────────────────────────────────────────────────────
 beforeAll(async () => {
+	// Force subscription mode ON so existing tests retain their semantics.
+	// (Default for production is "false" = unlimited mode.)
+	(env as any).SUBSCRIPTION_ENABLED = "true";
+
 	await env.blackout_db
 		.prepare(
 			`CREATE TABLE IF NOT EXISTS licenses (
@@ -90,7 +90,6 @@ beforeAll(async () => {
 		.run();
 });
 
-// Clean test data before each test (but keep tables & seed plans)
 beforeEach(async () => {
 	await env.blackout_db
 		.prepare("DELETE FROM licenses WHERE device_id LIKE 'test-%'")
@@ -100,9 +99,6 @@ beforeEach(async () => {
 		.run();
 });
 
-// ─────────────────────────────────────────────────────────────
-// Basic routing
-// ─────────────────────────────────────────────────────────────
 describe("BLACKOUT backend — basic routing", () => {
 	it("returns 404 on unknown route", async () => {
 		const res = await callWorker("/api/unknown");
@@ -128,9 +124,6 @@ describe("BLACKOUT backend — basic routing", () => {
 	});
 });
 
-// ─────────────────────────────────────────────────────────────
-// /api/get-plans
-// ─────────────────────────────────────────────────────────────
 describe("BLACKOUT backend — /api/get-plans", () => {
 	it("returns an array of active plans", async () => {
 		const res = await callWorker("/api/get-plans");
@@ -163,9 +156,6 @@ describe("BLACKOUT backend — /api/get-plans", () => {
 	});
 });
 
-// ─────────────────────────────────────────────────────────────
-// /api/get-credits
-// ─────────────────────────────────────────────────────────────
 describe("BLACKOUT backend — /api/get-credits", () => {
 	it("returns 400 if device_id is missing", async () => {
 		const res = await callWorker("/api/get-credits");
@@ -216,9 +206,6 @@ describe("BLACKOUT backend — /api/get-credits", () => {
 	});
 });
 
-// ─────────────────────────────────────────────────────────────
-// /api/consume-credits
-// ─────────────────────────────────────────────────────────────
 describe("BLACKOUT backend — /api/consume-credits", () => {
 	it("rejects invalid amount", async () => {
 		const res = await callWorker("/api/consume-credits", {
@@ -288,9 +275,6 @@ describe("BLACKOUT backend — /api/consume-credits", () => {
 	});
 });
 
-// ─────────────────────────────────────────────────────────────
-// /api/admin/* — auth guards
-// ─────────────────────────────────────────────────────────────
 describe("BLACKOUT backend — /api/admin/* (auth)", () => {
 	it("blocks all admin routes without auth", async () => {
 		const routes = [
@@ -346,9 +330,6 @@ describe("BLACKOUT backend — /api/admin/* (auth)", () => {
 	});
 });
 
-// ─────────────────────────────────────────────────────────────
-// /api/admin/user-action
-// ─────────────────────────────────────────────────────────────
 describe("BLACKOUT backend — /api/admin/user-action", () => {
 	it("rejects unknown action with 400", async () => {
 		const res = await callWorker("/api/admin/user-action", {
@@ -453,9 +434,6 @@ describe("BLACKOUT backend — /api/admin/user-action", () => {
 	});
 });
 
-// ─────────────────────────────────────────────────────────────
-// /api/nowpayments-webhook
-// ─────────────────────────────────────────────────────────────
 describe("BLACKOUT backend — /api/nowpayments-webhook", () => {
 	it("rejects requests without signature header", async () => {
 		const res = await callWorker("/api/nowpayments-webhook", {

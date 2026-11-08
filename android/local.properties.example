@@ -19,11 +19,35 @@
 # sdk.dir=/home/YOUR_USERNAME/Android/Sdk
 
 # ------------------------------------------------------------
+# Subscription / Credits System
+# ------------------------------------------------------------
+# "false" (DEFAULT) → App runs 100% OFFLINE.
+#                     • No network requests are made.
+#                     • BACKEND_URL is IGNORED (placeholder is OK).
+#                     • Admin panel is hidden.
+#                     • No credits are required or deducted.
+#                     • NOWPayments is not used by the client.
+#
+# "true"            → App requires credits.
+#                     • BACKEND_URL must be a real Cloudflare Worker.
+#                     • Admin panel is accessible (5-tap Device ID).
+#                     • NOWPayments + credit consumption are active.
+#
+# IMPORTANT: Keep this consistent with the backend's
+# `SUBSCRIPTION_ENABLED` var in `wrangler.local.jsonc`.
+SUBSCRIPTION_ENABLED=false
+
+# ------------------------------------------------------------
 # Backend URL (Cloudflare Worker)
 # ------------------------------------------------------------
+# Required ONLY when SUBSCRIPTION_ENABLED=true.
+#
 # After deploying `backend/` with `npx wrangler deploy`, you will
 # get a URL like:
 #     https://blackout-backend.YOUR_SUBDOMAIN.workers.dev
 #
 # Paste it below. Do NOT include a trailing slash.
+#
+# When SUBSCRIPTION_ENABLED=false, this value is completely
+# ignored — the placeholder below works fine for offline builds.
 BACKEND_URL=https://configure-me.workers.dev

@@ -19,3 +19,8 @@ NOWPAYMENTS_IPN_SECRET=your_ipn_secret_here
 # Choose a very strong password (20+ chars, mix of letters,
 # digits, and symbols)
 ADMIN_SECRET=your_super_strong_admin_password_here
+
+# --- Subscription System (non-secret, set in wrangler vars) ---
+# SUBSCRIPTION_ENABLED is configured via `vars` in wrangler.local.jsonc:
+#   "vars": { "SUBSCRIPTION_ENABLED": "false" }
+# Values: "true" (credits required) | "false" (default: unlimited mode)

@@ -68,11 +68,18 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 // ============================================================
-// BACKEND_URL is injected at build time from
-// `android/local.properties` (which is gitignored).
-// See `local.properties.example` for setup instructions.
+// Build-time config injected from `android/local.properties`.
+//
+// SUBSCRIPTION_ENABLED = false  →  App runs 100% OFFLINE.
+//                                  No network calls, no backend,
+//                                  no admin panel. BACKEND_URL
+//                                  is ignored entirely.
+// SUBSCRIPTION_ENABLED = true   →  App requires credits and uses
+//                                  the Cloudflare Worker backend
+//                                  (admin panel + NOWPayments).
 // ============================================================
 val BACKEND_URL: String = BuildConfig.BACKEND_URL
+val SUBSCRIPTION_ENABLED: Boolean = BuildConfig.SUBSCRIPTION_ENABLED
 
 data class HistoryItem(val id: String, val time: String, val target: String, val qty: Int)
 data class LogItem(val time: String, val msg: String, val type: LogType)
@@ -98,7 +105,8 @@ data class AppStrings(
     val adminDashboard: String, val adminUsers: String, val adminTx: String, val adminPlans: String, val adminBanned: String, val adminUnban: String,
     val adminSetCredits: String, val adminDelete: String, val adminSave: String, val bannedMsg: String,
     val disclaimerTitle: String, val disclaimerText: String, val disclaimerAgree: String, val disclaimerExit: String,
-    val adminPlanName: String, val adminPlanPrice: String, val adminPlanCredits: String, val adminPlanActive: String
+    val adminPlanName: String, val adminPlanPrice: String, val adminPlanCredits: String, val adminPlanActive: String,
+    val unlimitedMode: String
 )
 
 val stringsEn = AppStrings(
@@ -115,7 +123,8 @@ val stringsEn = AppStrings(
     "DASHBOARD", "USERS", "TRANSACTIONS", "PLANS", "BAN", "UNBAN",
     "SET CREDITS", "DELETE", "SAVE", "YOUR ACCOUNT HAS BEEN BANNED!",
     "⚠️ LEGAL DISCLAIMER", "This tool is strictly for authorized security research and educational purposes.\n\nUsing this tool against devices you do not own or have explicit permission to test is illegal and strictly prohibited.\n\nThe developer assumes no liability for any misuse, damage, or legal consequences caused by this software. By clicking 'I AGREE', you confirm that you take full responsibility for your actions.", "I AGREE", "EXIT",
-    "Name", "Price ($)", "Credits", "Active"
+    "Name", "Price ($)", "Credits", "Active",
+    "OFFLINE MODE"
 )
 
 val stringsFa = AppStrings(
@@ -132,7 +141,8 @@ val stringsFa = AppStrings(
     "داشبورد", "کاربران", "تراکنش‌ها", "پلن‌ها", "مسدود کردن", "رفع مسدودی",
     "تنظیم اعتبار", "حذف", "ذخیره", "حساب کاربری شما مسدود شده است!",
     "⚠️ سلب مسئولیت قانونی", "این ابزار صرفاً برای تحقیقات امنیتی مجاز و اهداف آموزشی طراحی شده است.\n\nاستفاده از این ابزار علیه دستگاه‌هایی که مالک آن‌ها نیستید یا اجازه صریح برای تست آن‌ها را ندارید، غیرقانونی است و اکیداً ممنوع می‌باشد.\n\nتوسعه‌دهنده هیچ مسئولیتی در قبال سوءاستفاده، خسارات یا عواقب قانونی ناشی از این نرم‌افزار نمی‌پذیرد. با کلیک روی 'تایید می‌کنم'، شما تایید می‌کنید که مسئولیت کامل اقدامات خود را می‌پذیرید.", "تایید می‌کنم", "خروج",
-    "نام", "قیمت (دلار)", "تعداد اعتبار", "فعال"
+    "نام", "قیمت (دلار)", "تعداد اعتبار", "فعال",
+    "حالت آفلاین"
 )
 
 val DarkBg = Color(0xFF050505)
@@ -146,7 +156,7 @@ val LogError = Color(0xFFFF3333)
 val LogWarn = Color(0xFFFFCC00)
 val LogCmd = Color(0xFF00BFFF)
 
-// --- Network functions ---
+// --- Network functions (only used when SUBSCRIPTION_ENABLED == true) ---
 suspend fun fetchCredits(deviceId: String): Pair<Int, Boolean> {
     return withContext(Dispatchers.IO) {
         try {
@@ -328,13 +338,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Sanity-check: BACKEND_URL should be set via local.properties
-        val isConfigured = BACKEND_URL.isNotBlank() && !BACKEND_URL.contains("configure-me")
+        // Backend is REQUIRED only when subscription mode is on.
+        // When subscription is disabled, the app runs entirely offline
+        // and BACKEND_URL is ignored (placeholder is acceptable).
+        val backendConfigured = BACKEND_URL.isNotBlank() && !BACKEND_URL.contains("configure-me")
+        val missingBackendInSubscriptionMode = SUBSCRIPTION_ENABLED && !backendConfigured
 
         val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         setContent {
-            if (!isConfigured) {
-                // Show a clear configuration error screen instead of failing silently
+            if (missingBackendInSubscriptionMode) {
                 MaterialTheme(colorScheme = darkColorScheme(background = DarkBg, surface = PanelBg, primary = PrimaryColor)) {
                     Box(
                         modifier = Modifier.fillMaxSize().background(DarkBg).padding(24.dp),
@@ -355,9 +367,13 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
                                 Text(
-                                    "1. Copy android/local.properties.example → android/local.properties\n\n" +
-                                    "2. Set BACKEND_URL=https://your-worker.workers.dev\n\n" +
-                                    "3. Rebuild the project in Android Studio",
+                                    "Subscription mode is ENABLED but BACKEND_URL is missing.\n\n" +
+                                    "Either:\n" +
+                                    "  • Set BACKEND_URL=https://your-worker.workers.dev\n" +
+                                    "    in android/local.properties, OR\n" +
+                                    "  • Set SUBSCRIPTION_ENABLED=false to run the\n" +
+                                    "    app fully offline without a backend.\n\n" +
+                                    "Then rebuild in Android Studio.",
                                     color = TextColor,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp,
@@ -376,7 +392,11 @@ class MainActivity : ComponentActivity() {
             val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
 
             var hasAcceptedDisclaimer by remember { mutableStateOf(prefs.getBoolean("accepted_disclaimer", false)) }
-            var credits by remember { mutableStateOf<Int?>(null) }
+
+            // In offline mode (SUBSCRIPTION_ENABLED=false) we start with
+            // unlimited credits and never touch the network.
+            var isUnlimited by remember { mutableStateOf(!SUBSCRIPTION_ENABLED) }
+            var credits by remember { mutableStateOf<Int?>(if (SUBSCRIPTION_ENABLED) null else Int.MAX_VALUE) }
             var isBanned by remember { mutableStateOf(false) }
             var isAdminMode by remember { mutableStateOf(false) }
             var adminPassword by remember { mutableStateOf("") }
@@ -389,23 +409,32 @@ class MainActivity : ComponentActivity() {
                         onExit = { (context as? ComponentActivity)?.finish() }
                     )
                 } else {
+                    // Only ping the backend when subscription mode is on.
                     LaunchedEffect(Unit) {
-                        val (c, b) = fetchCredits(deviceId)
-                        credits = c
-                        isBanned = b
+                        if (SUBSCRIPTION_ENABLED) {
+                            val (c, b) = fetchCredits(deviceId)
+                            if (c < 0) {
+                                // Backend also disabled subscription — switch to offline.
+                                isUnlimited = true
+                                credits = Int.MAX_VALUE
+                            } else {
+                                credits = c
+                                isBanned = b
+                            }
+                        }
                     }
 
                     if (credits == null) {
                         Box(modifier = Modifier.fillMaxSize().background(DarkBg), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = PrimaryColor) }
-                    } else if (isBanned) {
+                    } else if (!isUnlimited && isBanned) {
                         Box(modifier = Modifier.fillMaxSize().background(DarkBg).padding(24.dp), contentAlignment = Alignment.Center) {
                             Text(strings.bannedMsg, color = LogError, fontFamily = FontFamily.Monospace, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                         }
-                    } else if (credits!! <= 0 && !isAdminMode) {
+                    } else if (!isUnlimited && credits!! <= 0 && !isAdminMode) {
                         LicenseScreen(strings, deviceId, onActivated = { credits = it })
                     } else {
                         AppRoot(
-                            strings, currentLang, credits!!, deviceId, isAdminMode, adminPassword,
+                            strings, currentLang, credits!!, deviceId, isAdminMode, adminPassword, isUnlimited,
                             onLangChange = { currentLang = it; prefs.edit { putString("language", it) } },
                             onCreditsUpdate = { credits = it },
                             onAdminAuthSuccess = { pass -> isAdminMode = true; adminPassword = pass }
@@ -502,7 +531,7 @@ fun LicenseScreen(strings: AppStrings, deviceId: String, onActivated: (Int) -> U
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppRoot(strings: AppStrings, currentLang: String, credits: Int, deviceId: String, isAdminMode: Boolean, adminPassword: String, onLangChange: (String) -> Unit, onCreditsUpdate: (Int) -> Unit, onAdminAuthSuccess: (String) -> Unit) {
+fun AppRoot(strings: AppStrings, currentLang: String, credits: Int, deviceId: String, isAdminMode: Boolean, adminPassword: String, isUnlimited: Boolean, onLangChange: (String) -> Unit, onCreditsUpdate: (Int) -> Unit, onAdminAuthSuccess: (String) -> Unit) {
     var currentTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -511,6 +540,7 @@ fun AppRoot(strings: AppStrings, currentLang: String, credits: Int, deviceId: St
                 NavigationBarItem(icon = { Icon(Icons.Default.Home, null, modifier = Modifier.size(20.dp)) }, label = { Text(strings.tabHome, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }, selected = currentTab == 0, onClick = { currentTab = 0 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = PrimaryColor, selectedTextColor = PrimaryColor, indicatorColor = Color.Transparent))
                 NavigationBarItem(icon = { Icon(Icons.Default.History, null, modifier = Modifier.size(20.dp)) }, label = { Text(strings.tabHistory, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }, selected = currentTab == 1, onClick = { currentTab = 1 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = PrimaryColor, selectedTextColor = PrimaryColor, indicatorColor = Color.Transparent))
                 NavigationBarItem(icon = { Icon(Icons.Default.Settings, null, modifier = Modifier.size(20.dp)) }, label = { Text(strings.tabSettings, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }, selected = currentTab == 2, onClick = { currentTab = 2 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = PrimaryColor, selectedTextColor = PrimaryColor, indicatorColor = Color.Transparent))
+                // Admin tab is only accessible in subscription mode (requires backend).
                 if (isAdminMode) {
                     NavigationBarItem(icon = { Icon(Icons.Default.Star, null, modifier = Modifier.size(20.dp)) }, label = { Text(strings.tabAdmin, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }, selected = currentTab == 3, onClick = { currentTab = 3 }, colors = NavigationBarItemDefaults.colors(selectedIconColor = LogWarn, selectedTextColor = LogWarn, indicatorColor = Color.Transparent))
                 }
@@ -519,10 +549,10 @@ fun AppRoot(strings: AppStrings, currentLang: String, credits: Int, deviceId: St
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (currentTab) {
-                0 -> TerminalHomeScreen(strings, credits, deviceId, onCreditsUpdate)
+                0 -> TerminalHomeScreen(strings, credits, deviceId, isUnlimited, onCreditsUpdate)
                 1 -> HistoryScreen(strings)
                 2 -> SettingsScreen(strings, currentLang, onLangChange, credits, deviceId, onCreditsUpdate, onAdminAuthSuccess)
-                3 -> if (isAdminMode) AdminScreen(strings, adminPassword) else TerminalHomeScreen(strings, credits, deviceId, onCreditsUpdate)
+                3 -> if (isAdminMode) AdminScreen(strings, adminPassword) else TerminalHomeScreen(strings, credits, deviceId, isUnlimited, onCreditsUpdate)
             }
         }
     }
@@ -530,7 +560,7 @@ fun AppRoot(strings: AppStrings, currentLang: String, credits: Int, deviceId: St
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TerminalHomeScreen(strings: AppStrings, credits: Int, deviceId: String, onCreditsUpdate: (Int) -> Unit) {
+fun TerminalHomeScreen(strings: AppStrings, credits: Int, deviceId: String, isUnlimited: Boolean, onCreditsUpdate: (Int) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -572,9 +602,13 @@ fun TerminalHomeScreen(strings: AppStrings, credits: Int, deviceId: String, onCr
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
 
-        // (Text logo removed)
-
-        Text(strings.creditsLeft.format(credits), color = if (credits > 0) PrimaryColor else LogError, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+        Text(
+            if (isUnlimited) strings.unlimitedMode else strings.creditsLeft.format(credits),
+            color = if (isUnlimited || credits > 0) PrimaryColor else LogError,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
 
         Card(colors = CardDefaults.cardColors(containerColor = PanelBg), shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, BorderColor), modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -616,23 +650,48 @@ fun TerminalHomeScreen(strings: AppStrings, credits: Int, deviceId: String, onCr
 
                     Button(
                         onClick = {
-                            if (currentStep < 3) { currentStep++ }
-                            else {
+                            if (currentStep < 3) {
+                                currentStep++
+                            } else {
                                 val dest = if (targetNumber.isNotEmpty()) targetNumber else autoNum
-                                if (dest == null) { SmsEventBus.emitLog("[ERR] Target is empty", LogType.ERROR); return@Button }
+                                if (dest == null) {
+                                    SmsEventBus.emitLog("[ERR] Target is empty", LogType.ERROR)
+                                    return@Button
+                                }
                                 val qty = quantity.toIntOrNull() ?: 1
-                                if (credits < qty) { Toast.makeText(context, strings.noCredits, Toast.LENGTH_SHORT).show(); return@Button }
 
-                                scope.launch(Dispatchers.IO) {
-                                    val deducted = consumeCredits(deviceId, qty)
-                                    withContext(Dispatchers.Main) {
-                                        if (!deducted) { Toast.makeText(context, strings.noCredits, Toast.LENGTH_SHORT).show(); return@withContext }
-                                        onCreditsUpdate(credits - qty)
-                                        val intent = Intent(context, SmsService::class.java).apply { putExtra("target", dest); putExtra("quantity", qty); putExtra("subId", selectedSim?.subId ?: 0) }
-                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
-                                            ContextCompat.startForegroundService(context, intent)
-                                            saveHistory(context, dest, qty)
-                                            currentStep = 1; targetNumber = ""; quantity = ""
+                                fun fireService() {
+                                    val intent = Intent(context, SmsService::class.java).apply {
+                                        putExtra("target", dest)
+                                        putExtra("quantity", qty)
+                                        putExtra("subId", selectedSim?.subId ?: 0)
+                                    }
+                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
+                                        ContextCompat.startForegroundService(context, intent)
+                                        saveHistory(context, dest, qty)
+                                        currentStep = 1
+                                        targetNumber = ""
+                                        quantity = ""
+                                    }
+                                }
+
+                                if (isUnlimited) {
+                                    // OFFLINE MODE: no backend call, no credit check.
+                                    fireService()
+                                } else {
+                                    if (credits < qty) {
+                                        Toast.makeText(context, strings.noCredits, Toast.LENGTH_SHORT).show()
+                                        return@Button
+                                    }
+                                    scope.launch(Dispatchers.IO) {
+                                        val deducted = consumeCredits(deviceId, qty)
+                                        withContext(Dispatchers.Main) {
+                                            if (!deducted) {
+                                                Toast.makeText(context, strings.noCredits, Toast.LENGTH_SHORT).show()
+                                                return@withContext
+                                            }
+                                            onCreditsUpdate(credits - qty)
+                                            fireService()
                                         }
                                     }
                                 }
@@ -723,6 +782,17 @@ fun SettingsScreen(strings: AppStrings, currentLang: String, onLangChange: (Stri
     var adminPassInput by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
+    // Admin panel is only meaningful in subscription mode (it manages backend data).
+    // When SUBSCRIPTION_ENABLED=false, hide the 5-tap trigger entirely.
+    fun maybeTriggerAdmin() {
+        if (!SUBSCRIPTION_ENABLED) return
+        devIdClickCount++
+        if (devIdClickCount >= 5) {
+            devIdClickCount = 0
+            showAdminLoginDialog = true
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
         Text("> ${strings.tabSettings}", color = PrimaryColor, fontSize = 18.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
@@ -744,9 +814,24 @@ fun SettingsScreen(strings: AppStrings, currentLang: String, onLangChange: (Stri
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(strings.devInfo, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = TextColor)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Device ID: $deviceId", fontSize = 12.sp, color = HintColor, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { devIdClickCount++; if (devIdClickCount >= 5) { devIdClickCount = 0; showAdminLoginDialog = true } })
+                Text(
+                    text = "Device ID: $deviceId",
+                    fontSize = 12.sp,
+                    color = HintColor,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.clickable { maybeTriggerAdmin() }
+                )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; clipboard.setPrimaryClip(ClipData.newPlainText("Device ID", deviceId)); Toast.makeText(context, "Device ID Copied!", Toast.LENGTH_SHORT).show(); devIdClickCount++; if (devIdClickCount >= 5) { devIdClickCount = 0; showAdminLoginDialog = true } }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor, contentColor = DarkBg)) { Text(strings.copyDevId, fontFamily = FontFamily.Monospace) }
+                Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("Device ID", deviceId))
+                        Toast.makeText(context, "Device ID Copied!", Toast.LENGTH_SHORT).show()
+                        maybeTriggerAdmin()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor, contentColor = DarkBg)
+                ) { Text(strings.copyDevId, fontFamily = FontFamily.Monospace) }
             }
         }
 

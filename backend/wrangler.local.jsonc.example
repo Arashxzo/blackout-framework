@@ -18,6 +18,9 @@
 		"enabled": true
 	},
 	"upload_source_maps": true,
+	"vars": {
+		"SUBSCRIPTION_ENABLED": "false"
+	},
 	"d1_databases": [
 		{
 			"binding": "blackout_db",

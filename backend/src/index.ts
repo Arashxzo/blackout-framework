@@ -3,6 +3,7 @@ export interface Env {
   NOWPAYMENTS_API_KEY: string;
   NOWPAYMENTS_IPN_SECRET: string;
   ADMIN_SECRET: string;
+  SUBSCRIPTION_ENABLED?: string;
 }
 
 export default {
@@ -15,6 +16,10 @@ export default {
     };
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+    // Subscription is OPTIONAL and DISABLED by default.
+    // Enable by setting SUBSCRIPTION_ENABLED=true in wrangler vars.
+    const subscriptionEnabled = env.SUBSCRIPTION_ENABLED === 'true';
 
     const authHeader = request.headers.get('Authorization');
     const isAdmin =
@@ -38,6 +43,13 @@ export default {
     // 2. Create payment link
     // ==========================================
     if (url.pathname === '/api/create-payment' && request.method === 'POST') {
+      if (!subscriptionEnabled) {
+        return new Response(
+          JSON.stringify({ error: 'Subscription system is disabled' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       try {
         const { deviceId, planId } = (await request.json()) as {
           deviceId: string;
@@ -118,6 +130,14 @@ export default {
       const deviceId = url.searchParams.get('device_id');
       if (!deviceId) return new Response('Missing device_id', { status: 400, headers: corsHeaders });
 
+      // Subscription disabled — tell client it's unlimited.
+      if (!subscriptionEnabled) {
+        return new Response(
+          JSON.stringify({ credits: -1, banned: false, subscription_enabled: false }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const result: any = await env.blackout_db
         .prepare('SELECT credits, is_banned FROM licenses WHERE device_id = ?')
         .bind(deviceId)
@@ -128,18 +148,18 @@ export default {
           .prepare('INSERT OR IGNORE INTO licenses (device_id, credits, is_banned, total_sms_sent) VALUES (?, 0, 0, 0)')
           .bind(deviceId)
           .run();
-        return new Response(JSON.stringify({ credits: 0, banned: false }), {
+        return new Response(JSON.stringify({ credits: 0, banned: false, subscription_enabled: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       if (result.is_banned === 1) {
-        return new Response(JSON.stringify({ credits: 0, banned: true }), {
+        return new Response(JSON.stringify({ credits: 0, banned: true, subscription_enabled: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      return new Response(JSON.stringify({ credits: result.credits, banned: false }), {
+      return new Response(JSON.stringify({ credits: result.credits, banned: false, subscription_enabled: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -148,6 +168,14 @@ export default {
     // 4. Consume credits
     // ==========================================
     if (url.pathname === '/api/consume-credits' && request.method === 'POST') {
+      // Subscription disabled — no-op success.
+      if (!subscriptionEnabled) {
+        return new Response(
+          JSON.stringify({ success: true, credits: -1, subscription_enabled: false }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       try {
         const { deviceId, amount } = (await request.json()) as { deviceId: string; amount: number };
 
@@ -204,7 +232,6 @@ export default {
         return new Response('Missing signature', { status: 401 });
       }
 
-      // Parse JSON first
       let payload: any;
       try {
         payload = JSON.parse(bodyText);
@@ -212,8 +239,6 @@ export default {
         return new Response('Invalid JSON', { status: 400 });
       }
 
-      // IMPORTANT: NOWPayments requires the body to be sorted
-      // alphabetically (recursively) by keys before hashing.
       const sortedBody = JSON.stringify(sortObjectDeep(payload));
 
       if (!(await verifySignature(sortedBody, signature, env.NOWPAYMENTS_IPN_SECRET))) {
@@ -234,8 +259,6 @@ export default {
         return new Response('Transaction not found', { status: 404 });
       }
 
-      // Idempotency: only 'finished' is terminal success.
-      // If we've already credited, ignore duplicates.
       if (txRecord.status === 'finished') {
         return new Response('Already processed', { status: 200 });
       }
@@ -247,15 +270,18 @@ export default {
         return new Response('Missing order_id', { status: 400 });
       }
 
-      // Update transaction status
       await env.blackout_db
         .prepare('UPDATE transactions SET status = ?, updated_at = datetime("now") WHERE id = ?')
         .bind(paymentStatus, invoiceId)
         .run();
 
-      // Only 'finished' is the terminal success state.
-      // 'confirmed', 'sending', 'waiting', 'confirming' are in-progress.
       if (paymentStatus === 'finished') {
+        // Ensure a license row exists before crediting (safe even if subscription was disabled)
+        await env.blackout_db
+          .prepare('INSERT OR IGNORE INTO licenses (device_id, credits, is_banned, total_sms_sent) VALUES (?, 0, 0, 0)')
+          .bind(deviceId)
+          .run();
+
         await env.blackout_db
           .prepare('UPDATE licenses SET credits = credits + ? WHERE device_id = ?')
           .bind(txRecord.credits, deviceId)
@@ -311,9 +337,6 @@ export default {
       });
     }
 
-    // ==========================================
-    // Admin: user-action (ban / unban / delete / set_credits)
-    // ==========================================
     if (url.pathname === '/api/admin/user-action' && request.method === 'POST') {
       const { deviceId, action, value } = (await request.json()) as {
         deviceId: string;
@@ -328,7 +351,6 @@ export default {
         });
       }
 
-      // ✅ FIX: reject unknown actions explicitly instead of returning success.
       const validActions = ['ban', 'unban', 'delete', 'set_credits'];
       if (!validActions.includes(action)) {
         return new Response(
@@ -412,11 +434,6 @@ export default {
 // Helper Functions
 // ==========================================
 
-/**
- * Recursively sort object keys alphabetically.
- * NOWPayments requires the JSON body to be sorted by keys
- * (recursively) before HMAC-SHA512 verification.
- */
 function sortObjectDeep(obj: any): any {
   if (Array.isArray(obj)) return obj.map(sortObjectDeep);
   if (obj !== null && typeof obj === 'object') {
@@ -430,10 +447,6 @@ function sortObjectDeep(obj: any): any {
   return obj;
 }
 
-/**
- * Verify HMAC-SHA512 signature against a body and secret.
- * Returns false on malformed signatures instead of throwing.
- */
 async function verifySignature(
   body: string,
   signature: string,
@@ -454,11 +467,6 @@ async function verifySignature(
   return crypto.subtle.verify('HMAC', key, sigBytes, encoder.encode(body));
 }
 
-/**
- * Convert a hex string to Uint8Array.
- * Returns null if the input is empty, odd-length,
- * or contains non-hex characters.
- */
 function hexToUint8Array(hex: string): Uint8Array | null {
   if (!hex || hex.length % 2 !== 0) return null;
   const matches = hex.match(/.{1,2}/g);
