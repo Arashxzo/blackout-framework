@@ -1,212 +1,140 @@
 # BLACKOUT
 
-**Android Telephony Research Framework**
+**An Android framework for controlled research and testing of SMS capabilities**
 
-A native Android client built with Kotlin and Jetpack Compose. Runs fully offline by default, with an optional Cloudflare Workers backend for subscription and credit management.
+BLACKOUT is a native Android application built with Kotlin and Jetpack Compose. The project includes an Android app and an optional Cloudflare Workers backend. The backend supports subscription and credit management; the app runs without a backend by default.
 
----
+> **Use responsibly:** SMS capabilities in this project must only be tested on devices and SIM cards that you own or for which you have explicit, documented authorization. Sending unsolicited or bulk messages to other people, phone numbers, or services may cause disruption, incur costs, and result in legal consequences. Users are responsible for complying with applicable laws and obtaining any required consent.
 
-## Operating Modes
+## Screenshots
 
-BLACKOUT supports two mutually exclusive modes, controlled by the `SUBSCRIPTION_ENABLED` flag.
+| Home | History |
+|---|---|
+| ![Home screen](screenshots/home.jpg) | ![History screen](screenshots/history.jpg) |
 
-| | Offline (default) | Subscription |
+| Settings | Admin panel |
+|---|---|
+| ![Settings screen](screenshots/settings.jpg) | ![Admin panel](screenshots/admin-panel.jpg) |
+
+## Features
+
+- Native Android interface built with Jetpack Compose
+- English and Persian user interfaces
+- SIM information and device-related settings
+- Local app history and history browsing
+- Data-clearing option in Settings
+- Runs independently of the backend by default
+- Optional backend for credit, plan, payment, and administration features
+
+## Operating modes
+
+| Feature | Offline (default) | Subscription |
 |---|---|---|
 | `SUBSCRIPTION_ENABLED` | `false` | `true` |
 | Backend required | No | Yes |
-| Network calls | None | HTTPS to Cloudflare Worker |
-| Credits required | No | Yes |
-| Admin panel | Hidden | Available |
-| NOWPayments | Inactive | Active |
-| Telephony, history, language, panic wipe | Full | Full |
+| Network requests for subscription features | None | Cloudflare Worker |
+| Credit and payment management | Disabled | Enabled |
+| Admin panel | Disabled | Enabled |
 
-The flag must be set consistently on **both** sides:
+Subscription mode must be configured consistently in the Android app and the backend. If you do not need the backend, keep the default offline mode. In this mode, the app makes no network requests for subscription, payment, or credit-management services.
 
-- `android/local.properties` → injected into `BuildConfig`
-- `backend/wrangler.local.jsonc` → exposed as `env.SUBSCRIPTION_ENABLED`
+## Technology
 
----
+### Android app
 
-## Requirements
+- Kotlin and Jetpack Compose
+- Android Gradle Plugin `9.3.3`
+- Gradle Wrapper `9.5.0`
+- Java 17
+- `compileSdk` and `targetSdk`: 35
+- Minimum Android version: API 29 (Android 10)
 
-**Android (always)**
+### Optional backend
 
-- Android Studio with Gradle 9.5+ support
-- JDK 17+
-- Android SDK Platform 35
+- TypeScript on Cloudflare Workers
+- Cloudflare D1 for storage
+- NOWPayments for subscription-mode payment flows
+- Vitest and the Cloudflare Workers test environment
 
-**Backend (subscription mode only)**
+## Repository structure
 
-- Node.js 20+, npm
-- Cloudflare account (Workers + D1)
-- NOWPayments API key and IPN secret
-
----
-
-## Quick Start — Offline Mode
-
-1. Clone the repository and open `android/` in Android Studio.
-
-2. Create `android/local.properties` from the template:
-
-```
-cp local.properties.example local.properties
-```
-
-3. Set the SDK path (escape every backslash on Windows):
-
-```
-sdk.dir=C\:\\Users\\YourUser\\AppData\\Local\\Android\\Sdk
-SUBSCRIPTION_ENABLED=false
-BACKEND_URL=https://configure-me.workers.dev
-```
-
-4. Build and run. The app works fully offline; no backend is needed.
-
----
-
-## Enabling Subscription Mode
-
-Update **both** sides and rebuild/redeploy.
-
-**Backend** — `backend/wrangler.local.jsonc`:
-
-```jsonc
-"vars": { "SUBSCRIPTION_ENABLED": "true" }
-```
-
-**Android** — `android/local.properties`:
-
-```
-SUBSCRIPTION_ENABLED=true
-BACKEND_URL=https://your-worker.workers.dev
-```
-
-Rebuild the app and redeploy the worker. The home screen will switch from `OFFLINE MODE` to `Credits: N`, and the admin panel becomes accessible via 5 taps on the Device ID in Settings.
-
----
-
-## Backend Setup
-
-Skip this section if you are running in offline mode.
-
-```powershell
-cd backend
-npm install
-npx wrangler login
-npx wrangler d1 create blackout-db
-```
-
-Then:
-
-```powershell
-cp .dev.vars.example .dev.vars
-cp wrangler.local.jsonc.example wrangler.local.jsonc
-```
-
-Configure:
-
-- `wrangler.local.jsonc` — set your D1 `database_id` and `SUBSCRIPTION_ENABLED`
-- `.dev.vars` — set `NOWPAYMENTS_API_KEY`, `NOWPAYMENTS_IPN_SECRET`, `ADMIN_SECRET`
-
-Generate types, initialize the database, upload production secrets, and deploy:
-
-```powershell
-npm run types
-npm run db:init
-npx wrangler secret put NOWPAYMENTS_API_KEY --config wrangler.local.jsonc
-npx wrangler secret put NOWPAYMENTS_IPN_SECRET --config wrangler.local.jsonc
-npx wrangler secret put ADMIN_SECRET --config wrangler.local.jsonc
-npm run deploy
-```
-
-Wrangler prints the deployed Worker URL — use it as `BACKEND_URL` on the Android side.
-
----
-
-## API Reference
-
-All endpoints are served by the Cloudflare Worker. None are contacted when `SUBSCRIPTION_ENABLED=false`.
-
-**Public**
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/get-plans` | Active credit plans |
-| POST | `/api/create-payment` | Create a NOWPayments invoice |
-| GET | `/api/get-credits?device_id=X` | Device credits and ban status |
-| POST | `/api/consume-credits` | Consume credits |
-| POST | `/api/nowpayments-webhook` | Payment notification (HMAC-SHA512 verified) |
-
-**Admin** — require `Authorization: Bearer <ADMIN_SECRET>`
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/admin/stats` | Usage, user, and revenue statistics |
-| GET | `/api/admin/users` | List registered devices |
-| GET | `/api/admin/transactions` | Recent transactions |
-| POST | `/api/admin/user-action` | Ban, unban, delete, set credits |
-| GET | `/api/admin/plans` | All credit plans |
-| POST | `/api/admin/plans/update` | Update a credit plan |
-
----
-
-## Testing
-
-Backend tests run against the Cloudflare Workers test environment with Vitest.
-
-```powershell
-cd backend
-npm test
-```
-
-Tests force `SUBSCRIPTION_ENABLED=true` during setup, so both subscription and offline code paths are exercised explicitly.
-
----
-
-## Security
-
-- `ADMIN_SECRET`, `NOWPAYMENTS_API_KEY`, and `NOWPAYMENTS_IPN_SECRET` never reach the Android client.
-- Webhook notifications are verified with HMAC-SHA512 over a recursively-sorted JSON body before any state changes.
-- Secrets and local configuration (`local.properties`, `.dev.vars`, `wrangler.local.jsonc`, keystores) are excluded via `.gitignore`.
-- In offline mode, the client makes zero network requests — no fallback, no telemetry.
-
----
-
-## Project Structure
-
-```
-BLACKOUT/
+```text
+.
 ├── android/
-│   ├── app/                    # Android application module
-│   ├── local.properties.example
-│   └── ...
-├── backend/                    # Optional. Only for subscription mode.
-│   ├── src/index.ts
-│   ├── test/
-│   ├── schema.sql
-│   ├── wrangler.local.jsonc.example
-│   └── ...
+│   ├── app/                 # Android application
+│   ├── gradle/              # Gradle Wrapper
+│   └── local.properties.example
+├── backend/
+│   ├── src/                 # Cloudflare Worker
+│   ├── test/                # Backend tests
+│   ├── schema.sql           # D1 database schema
+│   ├── .dev.vars.example
+│   └── wrangler.local.jsonc.example
 ├── screenshots/
 ├── LICENSE
 └── README.md
 ```
 
----
+## Development requirements
+
+**Android**
+
+- Android Studio compatible with Gradle 9.5
+- JDK 17 or newer
+- Android SDK Platform 35
+- A test device or emulator running API 29 or newer
+
+**Backend** (only if developing subscription mode)
+
+- Node.js 20 or newer and npm
+- A Cloudflare account with Workers and D1 access
+- NOWPayments credentials for the intended test or production environment
+
+## Configuration
+
+The `*.example` files are templates. Before development, copy the appropriate template for each component to its local configuration file, and enter values only in the local copy:
+
+- Android: `android/local.properties.example`
+- Worker settings and D1 database ID: `backend/wrangler.local.jsonc.example`
+- Backend secrets: `backend/.dev.vars.example`
+
+For subscription mode, `SUBSCRIPTION_ENABLED` must be configured consistently in the Android and Worker settings, and the backend URL in the Android configuration must point to the intended Worker. In the default offline mode, the app does not require a backend.
+
+**Never commit secrets.** Local files such as `local.properties`, `.dev.vars`, and `wrangler.local.jsonc`, as well as signing keys and payment-service credentials, must not be committed or published. Do not use sample values as real credentials.
+
+## Backend tests
+
+Tests use the configured Vitest runner and Cloudflare test environment. In PowerShell:
+
+```powershell
+cd backend
+npm ci
+npm test
+```
+
+To keep the test runner active while developing:
+
+```powershell
+npm run test:watch
+```
+
+The existing tests cover API routes, subscription settings, and storage behavior. See `backend/test/` and `backend/src/` for implementation details.
+
+## Permissions and privacy
+
+Depending on the features you use, the app requests permissions including SMS sending, phone/SIM information, and internet access (for subscription mode). Review the purpose of each permission before granting it, and only proceed on a test device under your control.
+
+In the default offline mode, subscription and backend features are disabled. Subscription mode communicates with external services; review your configuration and the applicable privacy policies and terms before using it. Clearing data in the app cannot be undone; confirm the action only when you intend to delete local history and data.
 
 ## Contributing
 
-Contributions are welcome. Please ensure:
+When contributing:
 
-- Backend tests pass (`npm test` in `backend/`).
-- Offline mode remains fully functional without any backend.
-- Configuration changes are reflected in both `*.example` templates and this README.
-- No secrets or `local.properties` files are committed.
-
----
+1. Keep changes focused on a specific issue.
+2. Run relevant tests and include the results in your change description.
+3. Do not submit local configuration files, keys, passwords, or real user data.
+4. Preserve safeguards for authorized and controlled use.
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE) for details.
-
-Copyright © 2026 Arashxzo
+This project is licensed under the **Apache License 2.0**. See [LICENSE](LICENSE) for the full text.
